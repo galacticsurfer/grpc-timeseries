@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.min.js"></script>
+	<link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+	<link rel="stylesheet" type="text/css" href="style.css">
+	<script src="scripts/utils.js"></script>
+	<script>
+	  $( function() {
+		$("#start_datepicker").datepicker();
+		$("#end_datepicker").datepicker();
+	  } );
+	</script>
+  <title>Nifty Historic Close Line Chart</title>
+</head>
+<body>
+	<div class="content">
+		<br/><br/><br/>
+		<H1>Nifty Historic Close Line Chart</H1>
+		<div class="wrapper"><canvas id="chart-0"></canvas></div>
+
+		<h4>Select a start and end date and then click on submit</h4>
+		<form action=".">
+		  <label for="start_datepicker">Start date:</label><br>
+		  <input type="text" id="start_datepicker" required><br>
+		  <label for="end_datepicker">End date:</label><br>
+		  <input type="text" id="end_datepicker" required><br><br>
+			<button type="button" id="get_data" value="Submit"> Submit </button>
+		</form>
+	</div>
+
+	<script>
+
+		$(document).ready(function() {
+			$.ajax({
+				type: "POST",
+				url: "http://127.0.0.1:8011/"
+			}).then(function(response) {
+				var DATA_COUNT = response.length;
+				var utils = Samples.utils;
+
+				utils.srand(110);
+
+				function getLineColor(ctx) {
+					return utils.color(ctx.datasetIndex);
+				}
+
+				function alternatePointStyles(ctx) {
+					var index = ctx.dataIndex;
+					return index % 2 === 0 ? 'circle' : 'rect';
+				}
+
+				function makeHalfAsOpaque(ctx) {
+					return utils.transparentize(getLineColor(ctx));
+				}
+
+				function adjustRadiusBasedOnData(ctx) {
+					var v = ctx.dataPoint.y;
+					return v < 10 ? 5
+						: v < 25 ? 7
+						: v < 50 ? 9
+						: v < 75 ? 11
+						: 15;
+				}
+
+				function generateData(response) {
+				    var data_points = [];
+					for (var i = 0; i < response.length; i++) {
+						data_points.push(response[i]['value']);
+					}
+					return data_points;
+				}
+
+				function generateLabels(response) {
+					var labels = [];
+					for (var i = 0; i < response.length; i++) {
+					    var d = new Date(response[i]['ts']*1000);
+						labels.push(d.toDateString());
+					}
+					return labels;
+				}
+
+				var data = {
+					labels: generateLabels(response),
+					datasets: [{
+						data: generateData(response)
+					}]
+				};
+
+				var options = {
+					legend: false,
+					tooltips: true,
+					elements: {
+						line: {
+							fill: false,
+							backgroundColor: getLineColor,
+							borderColor: getLineColor,
+						},
+						point: {
+							backgroundColor: getLineColor,
+							hoverBackgroundColor: makeHalfAsOpaque,
+							radius: adjustRadiusBasedOnData,
+							pointStyle: alternatePointStyles,
+							hoverRadius: 15,
+						}
+					}
+				};
+
+				var chart = new Chart('chart-0', {
+					type: 'line',
+					data: data,
+					options: options
+				});
+
+			});
+		});
+
+	</script>
+
+	<script>
+		$("#get_data").click(function(event) {
+			var start_date = $("#start_datepicker").datepicker("getDate")/1000;
+			var end_date = $("#end_datepicker").datepicker("getDate")/1000;
+
+			if (start_date > end_date){
+				alert("Start date cannot be greater than End date");
+				return 0;
+			}
+
+			var formData = {"start_date": start_date, "end_date": end_date};
+			$.ajax({
+				type: "POST",
+				url: "http://127.0.0.1:8011/",
+				data : formData,
+				dataType: "json"
+			}).then(function(response) {
+				var DATA_COUNT = response.length;
+				var utils = Samples.utils;
+
+				utils.srand(110);
+
+				function getLineColor(ctx) {
+					return utils.color(ctx.datasetIndex);
+				}
+
+				function alternatePointStyles(ctx) {
+					var index = ctx.dataIndex;
+					return index % 2 === 0 ? 'circle' : 'rect';
+				}
+
+				function makeHalfAsOpaque(ctx) {
+					return utils.transparentize(getLineColor(ctx));
+				}
+
+				function adjustRadiusBasedOnData(ctx) {
+					var v = ctx.dataPoint.y;
+					return v < 10 ? 5
+						: v < 25 ? 7
+						: v < 50 ? 9
+						: v < 75 ? 11
+						: 15;
+				}
+
+				function generateData(response) {
+					var data_points = [];
+					for (var i = 0; i < response.length; i++) {
+						data_points.push(response[i]['value']);
+					}
+					return data_points;
+				}
+
+				function generateLabels(response) {
+					var labels = [];
+					for (var i = 0; i < response.length; i++) {
+						var d = new Date(response[i]['ts']*1000);
+						labels.push(d.toDateString());
+					}
+					return labels;
+				}
+
+				var data = {
+					labels: generateLabels(response),
+					datasets: [{
+						data: generateData(response)
+					}]
+				};
+
+				var options = {
+					legend: false,
+					tooltips: true,
+					elements: {
+						line: {
+							fill: false,
+							backgroundColor: getLineColor,
+							borderColor: getLineColor,
+						},
+						point: {
+							backgroundColor: getLineColor,
+							hoverBackgroundColor: makeHalfAsOpaque,
+							radius: adjustRadiusBasedOnData,
+							pointStyle: alternatePointStyles,
+							hoverRadius: 15,
+						}
+					}
+				};
+
+				var chart = new Chart('chart-0', {
+					type: 'line',
+					data: data,
+					options: options
+				});
+
+			});
+		});
+	</script>
+</body>
+</html>
